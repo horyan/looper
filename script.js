@@ -113,7 +113,11 @@ class AudioLooper {
         const track = {
             id: trackId,
             audio: new Audio(audioUrl),
-            isPlaying: false
+            isPlaying: false,
+            startTime: 0,
+            endTime: 0,
+            duration: 0,
+            name: `Track ${this.tracks.length + 1}`
         };
 
         // Create track element
@@ -125,7 +129,15 @@ class AudioLooper {
                 <button class="btn stop-btn" data-id="${trackId}">Stop</button>
                 <button class="btn delete-btn" data-id="${trackId}">Delete</button>
             </div>
-            <div class="track-name">Track ${this.tracks.length + 1}</div>
+            <div class="track-name" data-id="${trackId}">${track.name}</div>
+            <div class="range-slider-container">
+                <input type="range" class="range-slider start" min="0" max="100" value="0" data-id="${trackId}" step="0.001">
+                <input type="range" class="range-slider end" min="0" max="100" value="100" data-id="${trackId}" step="0.001">
+                <div class="range-labels">
+                    <span class="start-time">0:00</span>
+                    <span class="end-time">0:00</span>
+                </div>
+            </div>
             <audio src="${audioUrl}" controls></audio>
         `;
 
@@ -134,8 +146,101 @@ class AudioLooper {
         trackElement.querySelector('.stop-btn').addEventListener('click', () => this.stopTrack(trackId));
         trackElement.querySelector('.delete-btn').addEventListener('click', () => this.deleteTrack(trackId));
 
+        // Add event listener for track name editing
+        const trackNameElement = trackElement.querySelector('.track-name');
+        trackNameElement.addEventListener('click', () => this.startEditingTrackName(trackId));
+        trackNameElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.finishEditingTrackName(trackId);
+            } else if (e.key === 'Escape') {
+                this.cancelEditingTrackName(trackId);
+            }
+        });
+
+        // Add event listeners for range sliders
+        const startSlider = trackElement.querySelector('.range-slider.start');
+        const endSlider = trackElement.querySelector('.range-slider.end');
+        const startTimeLabel = trackElement.querySelector('.start-time');
+        const endTimeLabel = trackElement.querySelector('.end-time');
+
+        // Initialize audio duration when metadata is loaded
+        track.audio.addEventListener('loadedmetadata', () => {
+            // Round duration to 3 decimal places to avoid floating point issues
+            track.duration = Math.round(track.audio.duration * 1000) / 1000;
+            
+            // Set slider max values
+            startSlider.max = track.duration;
+            endSlider.max = track.duration;
+            
+            // Set initial end value
+            endSlider.value = track.duration;
+            track.endTime = track.duration;
+            
+            // Update labels
+            this.updateTimeLabels(trackId, 0, track.duration);
+            
+            console.log(`Track ${trackId} loaded with duration: ${track.duration}s`);
+        });
+
+        // Handle start slider changes
+        startSlider.addEventListener('input', (e) => {
+            const value = Math.round(parseFloat(e.target.value) * 1000) / 1000;
+            const endValue = Math.round(parseFloat(endSlider.value) * 1000) / 1000;
+            
+            // Ensure minimum gap between start and end
+            const minGap = 0.1;
+            if (value >= endValue - minGap) {
+                e.target.value = (endValue - minGap).toFixed(3);
+                return;
+            }
+            
+            track.startTime = parseFloat(e.target.value);
+            this.updateTimeLabels(trackId, track.startTime, track.endTime);
+            
+            if (track.isPlaying) {
+                if (track.audio.currentTime < track.startTime) {
+                    track.audio.currentTime = track.startTime;
+                }
+            }
+        });
+
+        // Handle end slider changes
+        endSlider.addEventListener('input', (e) => {
+            const value = Math.round(parseFloat(e.target.value) * 1000) / 1000;
+            const startValue = Math.round(parseFloat(startSlider.value) * 1000) / 1000;
+            
+            // Ensure minimum gap between start and end
+            const minGap = 0.1;
+            if (value <= startValue + minGap) {
+                e.target.value = (startValue + minGap).toFixed(3);
+                return;
+            }
+            
+            track.endTime = parseFloat(e.target.value);
+            this.updateTimeLabels(trackId, track.startTime, track.endTime);
+            
+            if (track.isPlaying) {
+                if (track.audio.currentTime > track.endTime) {
+                    track.audio.currentTime = track.startTime;
+                }
+            }
+        });
+
         this.tracksContainer.appendChild(trackElement);
         this.tracks.push(track);
+    }
+
+    updateTimeLabels(trackId, startTime, endTime) {
+        const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
+        const startTimeLabel = trackElement.querySelector('.start-time');
+        const endTimeLabel = trackElement.querySelector('.end-time');
+        
+        // Round times to 3 decimal places for consistency
+        const roundedStartTime = Math.round(startTime * 1000) / 1000;
+        const roundedEndTime = Math.round(endTime * 1000) / 1000;
+        
+        startTimeLabel.textContent = this.formatTime(roundedStartTime * 1000);
+        endTimeLabel.textContent = this.formatTime(roundedEndTime * 1000);
     }
 
     async playTrack(trackId) {
@@ -147,7 +252,8 @@ class AudioLooper {
                 }
 
                 // Reset and prepare audio
-                track.audio.currentTime = 0;
+                const startTime = Math.round(track.startTime * 1000) / 1000;
+                track.audio.currentTime = startTime;
                 track.audio.loop = true;
 
                 // Handle mobile autoplay
@@ -159,6 +265,16 @@ class AudioLooper {
                                 track.isPlaying = true;
                                 const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
                                 trackElement.classList.add('active');
+                                
+                                // Add timeupdate listener for loop points
+                                track.audio.addEventListener('timeupdate', () => {
+                                    const currentTime = Math.round(track.audio.currentTime * 1000) / 1000;
+                                    const endTime = Math.round(track.endTime * 1000) / 1000;
+                                    
+                                    if (currentTime >= endTime) {
+                                        track.audio.currentTime = startTime;
+                                    }
+                                });
                             })
                             .catch(error => {
                                 console.error('Playback failed:', error);
@@ -170,6 +286,16 @@ class AudioLooper {
                     track.isPlaying = true;
                     const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
                     trackElement.classList.add('active');
+                    
+                    // Add timeupdate listener for loop points
+                    track.audio.addEventListener('timeupdate', () => {
+                        const currentTime = Math.round(track.audio.currentTime * 1000) / 1000;
+                        const endTime = Math.round(track.endTime * 1000) / 1000;
+                        
+                        if (currentTime >= endTime) {
+                            track.audio.currentTime = startTime;
+                        }
+                    });
                 }
 
                 // Add ended event listener
@@ -205,6 +331,64 @@ class AudioLooper {
             const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
             trackElement.remove();
         }
+    }
+
+    startEditingTrackName(trackId) {
+        const track = this.tracks.find(t => t.id === trackId);
+        if (!track) return;
+
+        const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
+        const trackNameElement = trackElement.querySelector('.track-name');
+        
+        // Create input element
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = track.name;
+        input.maxLength = 50; // Limit name length
+        
+        // Clear and add input
+        trackNameElement.textContent = '';
+        trackNameElement.appendChild(input);
+        trackNameElement.classList.add('editing');
+        
+        // Focus and select text
+        input.focus();
+        input.select();
+    }
+
+    finishEditingTrackName(trackId) {
+        const track = this.tracks.find(t => t.id === trackId);
+        if (!track) return;
+
+        const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
+        const trackNameElement = trackElement.querySelector('.track-name');
+        const input = trackNameElement.querySelector('input');
+        
+        // Get new name and trim whitespace
+        const newName = input.value.trim();
+        
+        // If name is empty, revert to default
+        if (newName === '') {
+            track.name = `Track ${this.tracks.indexOf(track) + 1}`;
+        } else {
+            track.name = newName;
+        }
+        
+        // Update display
+        trackNameElement.textContent = track.name;
+        trackNameElement.classList.remove('editing');
+    }
+
+    cancelEditingTrackName(trackId) {
+        const track = this.tracks.find(t => t.id === trackId);
+        if (!track) return;
+
+        const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
+        const trackNameElement = trackElement.querySelector('.track-name');
+        
+        // Revert to original name
+        trackNameElement.textContent = track.name;
+        trackNameElement.classList.remove('editing');
     }
 
     async playAllTracks() {
