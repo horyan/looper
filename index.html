@@ -10,12 +10,19 @@
     <div class="container">
         <h1>Audio Looper</h1>
         
-        <div class="controls">
-            <button id="recordBtn" class="btn">Record</button>
-            <button id="stopBtn" class="btn" disabled>Stop</button>
-            <button id="playAllBtn" class="btn">Play All</button>
-            <button id="stopAllBtn" class="btn">Stop All</button>
-            <div id="timer" class="timer">00:00</div>
+        <div class="recording-section">
+            <div class="timer-container">
+                <div id="timer" class="timer">00:00</div>
+            </div>
+            <div class="recording-controls">
+                <button id="recordBtn" class="btn record-btn">Record</button>
+                <button id="stopBtn" class="btn stop-btn" disabled>Stop</button>
+            </div>
+        </div>
+
+        <div class="playback-controls">
+            <button id="playAllBtn" class="btn play-all-btn">Play All</button>
+            <button id="stopAllBtn" class="btn stop-all-btn">Stop All</button>
         </div>
 
         <div class="tracks-container" id="tracksContainer">
