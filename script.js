@@ -4,9 +4,10 @@ class AudioLooper {
         this.audioChunks = [];
         this.tracks = [];
         this.isRecording = false;
-        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        this.audioContext = null;
         this.recordingStartTime = 0;
         this.timerInterval = null;
+        this.isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
         // DOM Elements
         this.recordBtn = document.getElementById('recordBtn');
@@ -24,6 +25,29 @@ class AudioLooper {
         this.stopBtn.addEventListener('click', () => this.stopRecording());
         this.playAllBtn.addEventListener('click', () => this.playAllTracks());
         this.stopAllBtn.addEventListener('click', () => this.stopAllTracks());
+
+        // Initialize audio context on first user interaction
+        document.addEventListener('click', () => {
+            if (!this.audioContext) {
+                this.initializeAudioContext();
+            }
+        }, { once: true });
+    }
+
+    async initializeAudioContext() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            if (this.audioContext.state === 'suspended') {
+                await this.audioContext.resume();
+            }
+        } catch (error) {
+            console.error('Error initializing audio context:', error);
+            this.showError('Audio initialization failed. Please try refreshing the page.');
+        }
+    }
+
+    showError(message) {
+        alert(message);
     }
 
     formatTime(ms) {
@@ -40,6 +64,10 @@ class AudioLooper {
 
     async startRecording() {
         try {
+            if (!this.audioContext) {
+                await this.initializeAudioContext();
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             this.mediaRecorder = new MediaRecorder(stream);
             this.audioChunks = [];
@@ -61,12 +89,11 @@ class AudioLooper {
             this.recordBtn.disabled = true;
             this.stopBtn.disabled = false;
             
-            // Start timer
             this.recordingStartTime = Date.now();
             this.timerInterval = setInterval(() => this.updateTimer(), 1000);
         } catch (error) {
             console.error('Error accessing microphone:', error);
-            alert('Error accessing microphone. Please make sure you have granted microphone permissions.');
+            this.showError('Error accessing microphone. Please make sure you have granted microphone permissions.');
         }
     }
 
@@ -77,7 +104,6 @@ class AudioLooper {
             this.recordBtn.disabled = false;
             this.stopBtn.disabled = true;
 
-            // Stop all tracks
             this.mediaRecorder.stream.getTracks().forEach(track => track.stop());
         }
     }
@@ -112,22 +138,49 @@ class AudioLooper {
         this.tracks.push(track);
     }
 
-    playTrack(trackId) {
+    async playTrack(trackId) {
         const track = this.tracks.find(t => t.id === trackId);
         if (track) {
-            track.audio.currentTime = 0;
-            track.audio.loop = true;
-            track.audio.play();
-            track.isPlaying = true;
-            
-            // Add active class to track element
-            const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
-            trackElement.classList.add('active');
+            try {
+                if (!this.audioContext) {
+                    await this.initializeAudioContext();
+                }
 
-            // Add ended event listener to remove active class
-            track.audio.addEventListener('ended', () => {
-                trackElement.classList.remove('active');
-            });
+                // Reset and prepare audio
+                track.audio.currentTime = 0;
+                track.audio.loop = true;
+
+                // Handle mobile autoplay
+                if (this.isMobile) {
+                    const playPromise = track.audio.play();
+                    if (playPromise !== undefined) {
+                        playPromise
+                            .then(() => {
+                                track.isPlaying = true;
+                                const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
+                                trackElement.classList.add('active');
+                            })
+                            .catch(error => {
+                                console.error('Playback failed:', error);
+                                this.showError('Playback failed. Please try tapping the play button again.');
+                            });
+                    }
+                } else {
+                    await track.audio.play();
+                    track.isPlaying = true;
+                    const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
+                    trackElement.classList.add('active');
+                }
+
+                // Add ended event listener
+                track.audio.addEventListener('ended', () => {
+                    const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
+                    trackElement.classList.remove('active');
+                });
+            } catch (error) {
+                console.error('Error playing track:', error);
+                this.showError('Error playing track. Please try again.');
+            }
         }
     }
 
@@ -138,7 +191,6 @@ class AudioLooper {
             track.audio.currentTime = 0;
             track.isPlaying = false;
             
-            // Remove active class from track element
             const trackElement = document.querySelector(`[data-id="${trackId}"]`).closest('.track');
             trackElement.classList.remove('active');
         }
@@ -155,19 +207,38 @@ class AudioLooper {
         }
     }
 
-    playAllTracks() {
-        this.tracks.forEach(track => {
-            if (!track.isPlaying) {
-                track.audio.currentTime = 0;
-                track.audio.loop = true;
-                track.audio.play();
-                track.isPlaying = true;
-                
-                // Add active class to track element
-                const trackElement = document.querySelector(`[data-id="${track.id}"]`).closest('.track');
-                trackElement.classList.add('active');
+    async playAllTracks() {
+        try {
+            if (!this.audioContext) {
+                await this.initializeAudioContext();
             }
-        });
+
+            for (const track of this.tracks) {
+                if (!track.isPlaying) {
+                    track.audio.currentTime = 0;
+                    track.audio.loop = true;
+
+                    if (this.isMobile) {
+                        const playPromise = track.audio.play();
+                        if (playPromise !== undefined) {
+                            await playPromise.catch(error => {
+                                console.error('Playback failed:', error);
+                                this.showError('Some tracks failed to play. Please try playing them individually.');
+                            });
+                        }
+                    } else {
+                        await track.audio.play();
+                    }
+
+                    track.isPlaying = true;
+                    const trackElement = document.querySelector(`[data-id="${track.id}"]`).closest('.track');
+                    trackElement.classList.add('active');
+                }
+            }
+        } catch (error) {
+            console.error('Error playing all tracks:', error);
+            this.showError('Error playing tracks. Please try playing them individually.');
+        }
     }
 
     stopAllTracks() {
@@ -176,7 +247,6 @@ class AudioLooper {
             track.audio.currentTime = 0;
             track.isPlaying = false;
             
-            // Remove active class from track element
             const trackElement = document.querySelector(`[data-id="${track.id}"]`).closest('.track');
             trackElement.classList.remove('active');
         });
