@@ -3,6 +3,7 @@ let mediaRecorder;
 let audioChunks = [];
 let tracks = [];
 let isRecording = false;
+let audioStream; // Store the audio stream globally
 
 // DOM Elements
 const allowMicrophoneButton = document.getElementById('allow-microphone');
@@ -13,19 +14,24 @@ const tracksList = document.getElementById('tracks-list');
 // Request microphone access
 allowMicrophoneButton.addEventListener('click', async () => {
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // Stop any existing stream before requesting a new one
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
+        
+        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         allowMicrophoneButton.disabled = true;
         startRecordingButton.disabled = false;
         
         // Initialize MediaRecorder
-        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder = new MediaRecorder(audioStream);
         
         // Set up MediaRecorder event handlers
         mediaRecorder.ondataavailable = (event) => {
             audioChunks.push(event.data);
         };
 
-        mediaRecorder.onstop = () => {
+        mediaRecorder.onstop = async () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
             const audioUrl = URL.createObjectURL(audioBlob);
             const trackId = Date.now();
@@ -48,29 +54,55 @@ allowMicrophoneButton.addEventListener('click', async () => {
 
             // Start playing the track
             if (audioElement) {
-                audioElement.play().catch(error => console.error('Autoplay failed:', error));
+                try {
+                    // Ensure audio is loaded before playing
+                    await audioElement.load();
+                    await audioElement.play();
+                } catch (error) {
+                    console.error('Autoplay failed:', error);
+                }
             }
         };
     } catch (error) {
         console.error('Error accessing microphone:', error);
+        allowMicrophoneButton.disabled = false;
     }
 });
 
 // Start recording
-startRecordingButton.addEventListener('click', () => {
+startRecordingButton.addEventListener('click', async () => {
     if (mediaRecorder && !isRecording) {
-        audioChunks = [];
-        mediaRecorder.start();
-        isRecording = true;
-        startRecordingButton.disabled = true;
-        stopRecordingButton.disabled = false;
+        try {
+            // Ensure we have a valid stream
+            if (!audioStream || audioStream.getTracks().some(track => track.readyState === 'ended')) {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(audioStream);
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+            }
+            
+            audioChunks = [];
+            mediaRecorder.start();
+            isRecording = true;
+            startRecordingButton.disabled = true;
+            stopRecordingButton.disabled = false;
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            startRecordingButton.disabled = false;
+            stopRecordingButton.disabled = true;
+        }
     }
 });
 
 // Stop recording
 stopRecordingButton.addEventListener('click', () => {
     if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
+        try {
+            mediaRecorder.stop();
+        } catch (error) {
+            console.error('Error stopping recording:', error);
+        }
     }
 });
 
@@ -84,6 +116,7 @@ function createTrackElement(trackId, audioUrl) {
     audio.controls = true;
     audio.src = audioUrl;
     audio.loop = false; // We'll handle looping manually
+    audio.preload = 'auto';
     
     // Create editable track name
     const trackNameDiv = document.createElement('div');
@@ -167,8 +200,8 @@ function createTrackElement(trackId, audioUrl) {
 
     // Create loop toggle button
     const loopButton = document.createElement('button');
-    let isLooping = true; // Set looping to true by default
-    loopButton.textContent = 'Loop: ON';
+    let isLooping = false; // Set looping to false by default
+    loopButton.textContent = 'Loop: OFF';
 
     loopButton.addEventListener('click', () => {
         isLooping = !isLooping;
@@ -211,5 +244,5 @@ function createTrackElement(trackId, audioUrl) {
     trackDiv.appendChild(applyButton);
     tracksList.appendChild(trackDiv);
 
-    return audio; // Return the audio element for autoplay
+    return audio;
 } 
