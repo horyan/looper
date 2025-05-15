@@ -3,32 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio Looper</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Beat Looper 🔊🔊</title>
 </head>
 <body>
-    <div class="container">
-        <h1>Audio Looper</h1>
+    <div id="app">
+        <h1>Beat Looper</h1>
         
-        <div class="recording-section">
-            <div class="timer-container">
-                <div id="timer" class="timer">00:00</div>
-            </div>
-            <div class="recording-controls">
-                <button id="recordBtn" class="btn record-btn">Record</button>
-                <button id="stopBtn" class="btn stop-btn" disabled>Stop</button>
-            </div>
+        <div id="microphone-controls">
+            <button id="allow-microphone">Allow Microphone</button>
         </div>
 
-        <div class="playback-controls">
-            <button id="playAllBtn" class="btn play-all-btn">Play All</button>
-            <button id="stopAllBtn" class="btn stop-all-btn">Stop All</button>
+        <div id="recording-controls">
+            <button id="start-recording" disabled>Start Recording</button>
+            <button id="stop-recording" disabled>Stop Recording</button>
         </div>
 
-        <div class="tracks-container" id="tracksContainer">
-            <!-- Tracks will be added here dynamically -->
+        <div id="playback-controls">
+            <h2>Tracks</h2>
+            <div id="tracks-list"></div>
         </div>
     </div>
-    <script src="script.js"></script>
+
+    <script src="app.js"></script>
 </body>
 </html> 
