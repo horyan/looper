@@ -7,8 +7,7 @@ let audioStream; // Store the audio stream globally
 
 // DOM Elements
 const allowMicrophoneButton = document.getElementById('allow-microphone');
-const startRecordingButton = document.getElementById('start-recording');
-const stopRecordingButton = document.getElementById('stop-recording');
+const recordingButton = document.getElementById('start-recording'); // We'll use this single button
 const tracksList = document.getElementById('tracks-list');
 
 // Request microphone access
@@ -21,7 +20,7 @@ allowMicrophoneButton.addEventListener('click', async () => {
         
         audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         allowMicrophoneButton.disabled = true;
-        startRecordingButton.disabled = false;
+        recordingButton.disabled = false;
         
         // Initialize MediaRecorder
         mediaRecorder = new MediaRecorder(audioStream);
@@ -49,8 +48,9 @@ allowMicrophoneButton.addEventListener('click', async () => {
             // Reset for next recording
             audioChunks = [];
             isRecording = false;
-            startRecordingButton.disabled = false;
-            stopRecordingButton.disabled = true;
+            recordingButton.disabled = false;
+            recordingButton.textContent = 'START';
+            recordingButton.setAttribute('data-recording', 'false');
 
             // Start playing the track
             if (audioElement) {
@@ -69,9 +69,9 @@ allowMicrophoneButton.addEventListener('click', async () => {
     }
 });
 
-// Start recording
-startRecordingButton.addEventListener('click', async () => {
-    if (mediaRecorder && !isRecording) {
+// Toggle recording
+recordingButton.addEventListener('click', async () => {
+    if (!isRecording) {
         try {
             // Ensure we have a valid stream
             if (!audioStream || audioStream.getTracks().some(track => track.readyState === 'ended')) {
@@ -85,19 +85,13 @@ startRecordingButton.addEventListener('click', async () => {
             audioChunks = [];
             mediaRecorder.start();
             isRecording = true;
-            startRecordingButton.disabled = true;
-            stopRecordingButton.disabled = false;
+            recordingButton.textContent = 'STOP';
+            recordingButton.setAttribute('data-recording', 'true');
         } catch (error) {
             console.error('Error starting recording:', error);
-            startRecordingButton.disabled = false;
-            stopRecordingButton.disabled = true;
+            recordingButton.disabled = false;
         }
-    }
-});
-
-// Stop recording
-stopRecordingButton.addEventListener('click', () => {
-    if (mediaRecorder && isRecording) {
+    } else {
         try {
             mediaRecorder.stop();
         } catch (error) {
@@ -112,6 +106,20 @@ function createTrackElement(trackId, audioUrl) {
     trackDiv.className = 'track';
     trackDiv.id = `track-${trackId}`;
     
+    // Add delete button
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = 'DELETE';
+    deleteButton.className = 'delete-button';
+    deleteButton.addEventListener('click', () => {
+        // Remove from tracks array
+        const trackIndex = tracks.findIndex(t => t.id === trackId);
+        if (trackIndex !== -1) {
+            tracks.splice(trackIndex, 1);
+        }
+        // Remove the track element
+        trackDiv.remove();
+    });
+
     const audio = document.createElement('audio');
     audio.controls = true;
     audio.src = audioUrl;
@@ -201,19 +209,37 @@ function createTrackElement(trackId, audioUrl) {
     // Create loop toggle button
     const loopButton = document.createElement('button');
     let isLooping = false; // Set looping to false by default
-    loopButton.textContent = 'Loop: OFF';
+    loopButton.textContent = 'LOOP';
+    loopButton.setAttribute('data-looping', 'false');
+    let isAudioReady = false;
+
+    // Wait for audio to be ready
+    audio.addEventListener('canplaythrough', () => {
+        isAudioReady = true;
+    });
 
     loopButton.addEventListener('click', () => {
+        if (!isAudioReady) {
+            console.log('Audio not ready yet');
+            return;
+        }
+
         isLooping = !isLooping;
-        loopButton.textContent = isLooping ? 'Loop: ON' : 'Loop: OFF';
-        if (isLooping && audio.paused) {
+        loopButton.setAttribute('data-looping', isLooping.toString());
+        
+        if (isLooping) {
+            // Always start from the start point when enabling loop
             audio.currentTime = parseFloat(startPointInput.value);
-            audio.play().catch(error => console.error('Playback failed:', error));
+            audio.play();
+        } else {
+            audio.pause();
         }
     });
 
     // Handle playback with start/end points
     audio.addEventListener('timeupdate', () => {
+        if (!isAudioReady) return;
+
         const currentTime = audio.currentTime;
         const startTime = parseFloat(startPointInput.value);
         const endTime = parseFloat(endPointInput.value);
@@ -221,7 +247,7 @@ function createTrackElement(trackId, audioUrl) {
         if (currentTime >= endTime) {
             if (isLooping) {
                 audio.currentTime = startTime;
-                audio.play().catch(error => console.error('Playback failed:', error));
+                audio.play();
             } else {
                 audio.pause();
                 audio.currentTime = startTime;
@@ -231,9 +257,17 @@ function createTrackElement(trackId, audioUrl) {
 
     // Add apply button to update playback points
     const applyButton = document.createElement('button');
-    applyButton.textContent = 'Apply Points';
+    applyButton.textContent = 'SET RANGE';
+    applyButton.setAttribute('data-action', 'set-range');
     applyButton.addEventListener('click', () => {
-        audio.currentTime = parseFloat(startPointInput.value);
+        if (!isAudioReady) return;
+
+        const newStartTime = parseFloat(startPointInput.value);
+        audio.currentTime = newStartTime;
+        
+        if (isLooping) {
+            audio.play();
+        }
     });
 
     trackDiv.appendChild(trackNameDiv);
@@ -242,6 +276,7 @@ function createTrackElement(trackId, audioUrl) {
     trackDiv.appendChild(endPointDiv);
     trackDiv.appendChild(loopButton);
     trackDiv.appendChild(applyButton);
+    trackDiv.appendChild(deleteButton);
     tracksList.appendChild(trackDiv);
 
     return audio;

@@ -4,18 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Beat Looper 🔊🔊</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="app">
+        <div class="disclaimer">
+            ⚠️ For best experience, please use this app on a desktop device. Mobile devices may have limited functionality.
+        </div>
         <h1>Beat Looper</h1>
         
         <div id="microphone-controls">
-            <button id="allow-microphone">Allow Microphone</button>
+            <button id="allow-microphone">ALLOW MICROPHONE</button>
         </div>
 
         <div id="recording-controls">
-            <button id="start-recording" disabled>Start Recording</button>
-            <button id="stop-recording" disabled>Stop Recording</button>
+            <button id="start-recording" disabled data-recording="false">START</button>
         </div>
 
         <div id="playback-controls">
