@@ -6,132 +6,30 @@ body {
     margin: 0;
     padding: 16px;
     background: #f5f5f5;
-}
-
-/* Track container styles */
-.track {
-    background: white;
-    padding: 16px;
-    margin: 12px 0;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-/* Track name input */
-.track-name {
-    font-size: 18px;
-    padding: 8px;
-    margin-bottom: 12px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: calc(100% - 20px);
-}
-
-/* Range input container */
-.track > div {
-    display: flex;
-    align-items: center;
-    margin: 8px 0;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-/* Range input labels */
-.track label {
-    min-width: 100px;
-    font-size: 16px;
     color: #333;
+    line-height: 1.5;
 }
 
-/* Range inputs */
-.track input[type="number"] {
-    width: 80px;
-    padding: 8px;
-    font-size: 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    -webkit-appearance: none;
-    margin: 0;
+/* App container */
+#app {
+    max-width: 800px;
+    margin: 0 auto;
 }
 
-/* Audio element */
-audio {
-    width: 100%;
-    margin: 12px 0;
+/* Headers */
+h1 {
+    text-align: center;
+    color: #2196F3;
+    margin: 20px 0;
+    font-size: 2em;
 }
 
-/* Button container */
-.track > button {
-    margin: 8px 4px;
-}
-
-/* Mobile-friendly button styles */
-button {
-    min-height: 44px; /* Minimum touch target size */
-    min-width: 44px;
-    padding: 8px 16px;
-    margin: 4px;
-    font-size: 16px; /* Prevent iOS zoom on focus */
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background: #fff;
-    cursor: pointer;
-}
-
-button:active {
-    background: #f0f0f0;
-}
-
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* Loop button specific styles */
-button[data-looping="true"] {
-    background: #4CAF50; /* Green */
-    color: white;
-    border: none;
-}
-
-button[data-looping="false"] {
-    background: #f44336; /* Red */
-    color: white;
-    border: none;
-}
-
-/* SET RANGE button style */
-button[data-action="set-range"] {
-    background: #2196F3; /* Material Blue */
-    color: white;
-    border: none;
-}
-
-/* Recording button styles */
-button[data-recording="true"] {
-    background: #f44336; /* Red */
-    color: white;
-    border: none;
-}
-
-button[data-recording="false"] {
-    background: #4CAF50; /* Green */
-    color: white;
-    border: none;
-}
-
-.delete-button {
-    background-color: #f44336;
-    color: white;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-.delete-button:hover {
-    background-color: #d32f2f;
+h2 {
+    color: #333;
+    font-size: 1.5em;
+    margin: 20px 0 10px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #2196F3;
 }
 
 /* Disclaimer message */
@@ -144,4 +42,180 @@ button[data-recording="false"] {
     border: 1px solid #ffeeba;
     font-size: 14px;
     text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* Track container styles */
+#tracks-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.track {
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    height: fit-content;
+}
+
+.track:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Track name input */
+.track-name {
+    font-size: 16px;
+    padding: 8px;
+    margin-bottom: 12px;
+}
+
+/* Range input container */
+.track > div {
+    margin: 8px 0;
+    gap: 8px;
+}
+
+/* Range input labels */
+.track label {
+    min-width: 90px;
+    font-size: 14px;
+}
+
+/* Range inputs */
+.track input[type="number"] {
+    width: 70px;
+    padding: 8px;
+    font-size: 14px;
+}
+
+/* Audio element */
+audio {
+    width: 100%;
+    margin: 12px 0;
+    border-radius: 6px;
+    height: 36px;
+}
+
+/* Button container */
+.track > button {
+    margin: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+}
+
+.track > button:active {
+    transform: translateY(1px);
+}
+
+/* Mobile-friendly button styles */
+button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 10px 20px;
+    margin: 6px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+button:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* Loop button specific styles */
+button[data-looping="true"] {
+    background: #4CAF50;
+    color: white;
+}
+
+button[data-looping="false"] {
+    background: #f44336;
+    color: white;
+}
+
+/* SET RANGE button style */
+button[data-action="set-range"] {
+    background: #2196F3;
+    color: white;
+}
+
+/* Recording button styles */
+button[data-recording="true"] {
+    background: #f44336;
+    color: white;
+}
+
+button[data-recording="false"] {
+    background: #4CAF50;
+    color: white;
+}
+
+/* Delete button style */
+.delete-button {
+    background-color: #f44336;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-left: 10px;
+    transition: background-color 0.2s ease;
+}
+
+.delete-button:hover {
+    background-color: #d32f2f;
+}
+
+/* Control sections */
+#microphone-controls, #recording-controls {
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    #tracks-list {
+        grid-template-columns: 1fr;
+    }
+    
+    .track {
+        padding: 12px;
+    }
+    
+    .track label {
+        min-width: 100px;
+    }
+    
+    button {
+        width: 100%;
+        margin: 8px 0;
+    }
+    
+    .track > div {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .track input[type="number"] {
+        width: 100%;
+    }
 } 

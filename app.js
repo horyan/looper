@@ -247,7 +247,10 @@ function createTrackElement(trackId, audioUrl) {
         if (currentTime >= endTime) {
             if (isLooping) {
                 audio.currentTime = startTime;
-                audio.play();
+                // Ensure we don't pause other tracks
+                if (audio.paused) {
+                    audio.play();
+                }
             } else {
                 audio.pause();
                 audio.currentTime = startTime;
@@ -265,7 +268,8 @@ function createTrackElement(trackId, audioUrl) {
         const newStartTime = parseFloat(startPointInput.value);
         audio.currentTime = newStartTime;
         
-        if (isLooping) {
+        // Only play if this track is looping
+        if (isLooping && audio.paused) {
             audio.play();
         }
     });
